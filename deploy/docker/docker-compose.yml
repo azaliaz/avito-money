@@ -1,0 +1,43 @@
+# Use postgres/example user/password credentials
+version: "3.8"
+
+services:
+  migration:
+    restart: on-failure
+    container_name: migration
+    depends_on:
+      - postgres-01
+    build:
+      dockerfile: ./deploy/docker/migration/Dockerfile
+      context: ./../../
+      args:
+        VERSION: ${VERSION}
+    env_file:
+      - .env
+      - ./migration/.env
+  avito-shop:
+    restart: always
+    container_name: avito-shop
+    depends_on:
+      - postgres-01
+    build:
+      dockerfile: ./deploy/docker/avito-shop/Dockerfile
+      context: ./../../
+      args:
+        VERSION: ${VERSION}
+    ports:
+      - "8888:8888"
+    env_file:
+      - .env
+      - ./avito-shop/.env
+  postgres-01:
+    container_name: postgres-01
+    image: postgres
+    restart: always
+    environment:
+      POSTGRES_DB: avito-shop
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: 1
+    ports:
+      - "5432:5432"
+
