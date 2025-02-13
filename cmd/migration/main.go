@@ -2,9 +2,9 @@ package main
 
 import (
 	"flag"
-	"github.com/azaliaz/avito-shop/internal/storage"
-	"github.com/azaliaz/avito-shop/migrations"
-	"github.com/azaliaz/avito-shop/pkg/config"
+	"github.com/azaliaz/avito-money/internal/storage"
+	"github.com/azaliaz/avito-money/migrations"
+	"github.com/azaliaz/avito-money/pkg/config"
 	"log/slog"
 	"os"
 )

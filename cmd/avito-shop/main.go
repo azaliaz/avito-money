@@ -3,11 +3,11 @@ package main
 import (
 	"context"
 	"flag"
-	"github.com/azaliaz/avito-shop/internal/application"
-	"github.com/azaliaz/avito-shop/internal/facade/rest"
-	"github.com/azaliaz/avito-shop/internal/storage"
-	"github.com/azaliaz/avito-shop/pkg/config"
-	"github.com/azaliaz/avito-shop/pkg/service"
+	"github.com/azaliaz/avito-money/internal/application"
+	"github.com/azaliaz/avito-money/internal/facade/rest"
+	"github.com/azaliaz/avito-money/internal/storage"
+	"github.com/azaliaz/avito-money/pkg/config"
+	"github.com/azaliaz/avito-money/pkg/service"
 	"log/slog"
 	"os"
 )

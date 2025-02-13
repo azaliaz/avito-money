@@ -119,10 +119,8 @@ func (w *ServerInterfaceWrapper) PostApiAuth(ctx echo.Context) error {
 	return err
 }
 
-
 // GetApiBuyItem converts echo context to params.
 func (w *ServerInterfaceWrapper) GetApiBuyItem(ctx echo.Context) error {
-	
 	var err error
 	// ------------- Path parameter "item" -------------
 	var item string
@@ -139,7 +137,6 @@ func (w *ServerInterfaceWrapper) GetApiBuyItem(ctx echo.Context) error {
 	return err
 }
 
-
 // GetApiInfo converts echo context to params.
 func (w *ServerInterfaceWrapper) GetApiInfo(ctx echo.Context) error {
 	var err error
@@ -152,18 +149,14 @@ func (w *ServerInterfaceWrapper) GetApiInfo(ctx echo.Context) error {
 }
 
 // PostApiSendCoin converts echo context to params.
-func (s *Service) PostApiSendCoin(ctx echo.Context) error {
-    var req struct {
-        Amount int    `json:"amount"`
-        ToUser string `json:"toUser"`
-    }
+func (w *ServerInterfaceWrapper) PostApiSendCoin(ctx echo.Context) error {
+	var err error
 
-    if err := ctx.Bind(&req); err != nil {
-        return echo.NewHTTPError(http.StatusBadRequest, "Invalid request body")
-    }
+	ctx.Set(BearerAuthScopes, []string{})
 
-    // Логика обработки запроса
-    return ctx.JSON(http.StatusOK, map[string]string{"status": "success"})
+	// Invoke the callback with all the unmarshaled arguments
+	err = w.Handler.PostApiSendCoin(ctx)
+	return err
 }
 
 // This is a simple interface which specifies echo.Route addition functions which
@@ -193,12 +186,11 @@ func RegisterHandlersWithBaseURL(router EchoRouter, si ServerInterface, baseURL 
 	wrapper := ServerInterfaceWrapper{
 		Handler: si,
 	}
-	
+
 	router.POST(baseURL+"/api/auth", wrapper.PostApiAuth)
 	router.GET(baseURL+"/api/buy/:item", wrapper.GetApiBuyItem)
 	router.GET(baseURL+"/api/info", wrapper.GetApiInfo)
 	router.POST(baseURL+"/api/sendCoin", wrapper.PostApiSendCoin)
-	
 
 }
 

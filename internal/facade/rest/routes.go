@@ -3,10 +3,8 @@ package rest
 import (
 	"encoding/json"
 	"github.com/gofiber/fiber/v2"
-	"github.com/azaliaz/avito-shop/internal/application"
+	"github.com/azaliaz/avito-money/internal/application"
 	"strconv"
-	
-	
 	"strings"
 )
 
@@ -15,9 +13,9 @@ func (api *Service) Auth(ctx *fiber.Ctx) error {
 		Username string `json:"username"`
 		Password string `json:"password"`
 	}
-	
+
 	if err := ctx.BodyParser(&req); err != nil {
-		
+
 		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "invalid jsn",
 		})
@@ -32,11 +30,11 @@ func (api *Service) Auth(ctx *fiber.Ctx) error {
 		})
 	}
 
-	
 	return ctx.JSON(fiber.Map{
 		"token": res.Token,
 	})
 }
+
 func (api *Service) BuyItem(ctx *fiber.Ctx) error {
 	_, err := api.app.BuyItem(ctx.Context(), &application.BuyItemRequest{
 		Token: api.getToken(ctx),
@@ -47,7 +45,6 @@ func (api *Service) BuyItem(ctx *fiber.Ctx) error {
 	}
 	return nil
 }
-
 
 func (api *Service) Info(ctx *fiber.Ctx) error {
 	res, err := api.app.GetInfo(ctx.Context(), &application.GetInfoRequest{
@@ -174,11 +171,21 @@ func (api *Service) Info(ctx *fiber.Ctx) error {
 }
 
 func (api *Service) SendCoin(ctx *fiber.Ctx) error {
-	amount, err := strconv.Atoi(ctx.FormValue("amount"))
+	var req struct {
+		Amount string `json:"amount"`
+		ToUser string `json:"toUser"`
+	}
+	if err := ctx.BodyParser(&req); err != nil {
+
+		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "invalid jsn",
+		})
+	}
+	amount, err := strconv.Atoi(req.Amount)
 	if err != nil {
 		return err
 	}
-	toUser, err := strconv.ParseUint(ctx.FormValue("toUser"), 10, 64)
+	toUser, err := strconv.ParseUint(req.ToUser, 10, 64)
 	if err != nil {
 		return err
 	}
@@ -195,9 +202,5 @@ func (api *Service) SendCoin(ctx *fiber.Ctx) error {
 }
 
 func (api *Service) getToken(ctx *fiber.Ctx) string {
-    authHeader := ctx.Get("Authorization")
-    if authHeader == "" {
-        return ""
-    }
-    return strings.TrimPrefix(authHeader, "Bearer ")
+	return strings.TrimPrefix(ctx.Get("Authorization"), "Bearer ")
 }

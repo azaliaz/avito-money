@@ -5,9 +5,14 @@ import (
 	"errors"
 	"fmt"
 	"github.com/jackc/pgx/v5"
+	"log/slog"
 )
 
 func (r *Service) Auth(ctx context.Context, request *AuthRequest) (*AuthResponse, error) {
+	
+	if request.PassHash == "" {
+        return nil, errors.New("password cannot be empty")
+    }
 	conn, err := r.Pool().Acquire(ctx)
 	if err != nil {
 		return nil, err
@@ -20,12 +25,12 @@ func (r *Service) Auth(ctx context.Context, request *AuthRequest) (*AuthResponse
 	}
 	defer func() {
 		if err := tx.Rollback(ctx); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
-			r.logger.Error("rollback error", err)
+			r.logger.Error("rollback error", slog.String("err", err.Error()))
 		}
 	}()
 	_, err = tx.Exec(ctx,
-		`INSERT INTO users(username, password_hash)
-					SELECT @username, @password_hash
+		`INSERT INTO users(username, password_hash, balance)
+					SELECT @username, @password_hash, 1000
 					WHERE NOT EXISTS(SELECT 1 FROM users WHERE username = @username)`,
 		pgx.NamedArgs{
 			"username":      request.UserName,
@@ -44,14 +49,9 @@ func (r *Service) Auth(ctx context.Context, request *AuthRequest) (*AuthResponse
 			"username": request.UserName,
 		},
 	).Scan(&userId, &userName, &passwordHash)
-	_, err = tx.Exec(ctx,
-		`INSERT INTO coins(user_id, balance)
-					SELECT @user_id, 1000
-					WHERE NOT EXISTS(SELECT 1 FROM coins WHERE user_id = @user_id)`,
-		pgx.NamedArgs{
-			"user_id": userId,
-		},
-	)
+	if passwordHash != request.PassHash {
+        return nil, errors.New("invalid password")
+    }
 	return &AuthResponse{
 		UserId:   userId,
 		UserName: userName,
@@ -101,8 +101,8 @@ func (r *Service) GetBalance(ctx context.Context, userId uint64) (balance int, e
 	defer conn.Release()
 	err = conn.QueryRow(ctx,
 		`SELECT balance
-					FROM coins
-					WHERE user_id = @user_id`,
+					FROM users
+					WHERE id = @user_id`,
 		pgx.NamedArgs{
 			"user_id": userId,
 		},
@@ -186,13 +186,13 @@ func (r *Service) SendCoin(ctx context.Context, request *SendCoinRequest) (*Send
 	}
 	defer func() {
 		if err := tx.Rollback(ctx); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
-			r.logger.Error("rollback error", err)
+			r.logger.Error("rollback error", slog.String("err", err.Error()))
 		}
 	}()
 	res, err := tx.Exec(ctx,
-		`UPDATE coins
+		`UPDATE users
 				SET balance = balance - @amount
-				WHERE user_id = @user_id`,
+				WHERE id = @user_id`,
 		pgx.NamedArgs{
 			"amount":  request.Amount,
 			"user_id": request.UserId,
@@ -205,9 +205,9 @@ func (r *Service) SendCoin(ctx context.Context, request *SendCoinRequest) (*Send
 		return nil, fmt.Errorf("current user not found")
 	}
 	res, err = tx.Exec(ctx,
-		`UPDATE coins
+		`UPDATE users
 					SET balance = balance + @amount
-					WHERE user_id = @user_id`,
+					WHERE id = @user_id`,
 		pgx.NamedArgs{
 			"amount":  request.Amount,
 			"user_id": request.ToUser,
@@ -246,29 +246,31 @@ func (r *Service) BuyItem(ctx context.Context, request *BuyItemRequest) (*BuyIte
 	}
 	defer func() {
 		if err := tx.Rollback(ctx); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
-			r.logger.Error("rollabck error", err)
+			r.logger.Error("rollback error", slog.String("err", err.Error()))
 		}
 	}()
-	var amount int
+	var price int
 	err = tx.QueryRow(ctx,
-		`SELECT amount
+		`SELECT price
 				FROM items
 				WHERE name = @item`,
 		pgx.NamedArgs{
 			"item": request.Item,
 		},
-	).Scan(&amount)
+	).Scan(&price)
+	fmt.Println(price)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error get item price from db: %w", err)
 	}
 	_, err = tx.Exec(ctx,
-		`UPDATE coins SET balance = balance - @amount`,
+		`UPDATE users SET balance = balance - @amount WHERE id = @user_id`,
 		pgx.NamedArgs{
-			"amount": amount,
+			"amount":  price,
+			"user_id": request.UserId,
 		},
 	)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error update user balance: %w", err)
 	}
 	_, err = tx.Exec(ctx,
 		`UPDATE inventory SET quantity = quantity + 1
@@ -278,8 +280,8 @@ func (r *Service) BuyItem(ctx context.Context, request *BuyItemRequest) (*BuyIte
 			"item":    request.Item,
 		},
 	)
-	if err != nil {
-		return nil, err
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return nil, fmt.Errorf("error update user inventory: %w", err)
 	}
 	_, err = tx.Exec(ctx,
 		`INSERT INTO inventory(user_id, item, quantity)
@@ -291,7 +293,7 @@ func (r *Service) BuyItem(ctx context.Context, request *BuyItemRequest) (*BuyIte
 		},
 	)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error create user inventory: %w", err)
 	}
 	return nil, tx.Commit(ctx)
 }

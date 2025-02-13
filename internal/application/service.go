@@ -2,7 +2,7 @@ package application
 
 import (
 	"context"
-	"github.com/azaliaz/avito-shop/internal/storage"
+	"github.com/azaliaz/avito-money/internal/storage"
 	"log/slog"
 	"time"
 )

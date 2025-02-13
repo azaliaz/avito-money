@@ -56,11 +56,9 @@ type SendCoinResponse struct{}
 type BuyItemRequest struct {
 	UserId uint64
 	Item   string
-	
 }
 
 type BuyItemResponse struct {
-	
 }
 
 func NewService(db *DB, logger *slog.Logger) *Service {

@@ -25,7 +25,7 @@ type Config struct {
 func (config Config) dsnPostgres(log *slog.Logger) string {
 	host, port, err := net.SplitHostPort(config.Host)
 	if err != nil {
-		log.Error("parse db connect settings", err)
+		log.Error("parse db connect settings", slog.String("err", err.Error()))
 		host = defaultHost
 		port = defaultPort
 	}

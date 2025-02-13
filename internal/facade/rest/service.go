@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/gofiber/fiber/v2"
-	"github.com/azaliaz/avito-shop/internal/application"
+	"github.com/azaliaz/avito-money/internal/application"
 	"log/slog"
 	"time"
 )
@@ -42,7 +42,7 @@ func (api *Service) Init() error {
 	})
 
 	api.fiber.Add("POST", "/api/auth", api.Auth)
-	api.fiber.Add("GET", "/api/buy:item", api.BuyItem)
+	api.fiber.Add("GET", "/api/buy/:item", api.BuyItem)
 	api.fiber.Add("GET", "/api/info", api.Info)
 	api.fiber.Add("POST", "/api/sendCoin", api.SendCoin)
 

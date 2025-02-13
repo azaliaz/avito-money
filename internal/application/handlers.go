@@ -5,10 +5,14 @@ import (
 	"errors"
 	"fmt"
 	"github.com/golang-jwt/jwt"
-	"github.com/azaliaz/avito-shop/internal/storage"
+	"github.com/azaliaz/avito-money/internal/storage"
 )
 
 func (s *Service) Auth(ctx context.Context, request *AuthRequest) (*AuthResponse, error) {
+	
+	if request.Password == "" {
+        return nil, errors.New("password cannot be empty")
+    }
 	res, err := s.db.Auth(ctx, &storage.AuthRequest{
 		UserName: request.Username,
 		PassHash: request.Password,
@@ -24,6 +28,7 @@ func (s *Service) Auth(ctx context.Context, request *AuthRequest) (*AuthResponse
 	})
 	t, err := token.SignedString([]byte(s.config.Secret))
 	if err != nil {
+		
 		return nil, fmt.Errorf("error sign token: %w", err)
 	}
 	return &AuthResponse{
@@ -84,25 +89,20 @@ func (s *Service) GetInfo(ctx context.Context, request *GetInfoRequest) (*GetInf
 	}, nil
 }
 func (s *Service) SendCoin(ctx context.Context, request *SendCoinRequest) (*SendCoinResponse, error) {
-    userId, err := s.userIdFromToken(request.Token)
-    if err != nil {
-        return nil, err
-    }
+	userId, err := s.userIdFromToken(request.Token)
+	if err != nil {
+		return nil, err
+	}
 
-    // Проверка на нулевое значение
-    if request.Amount <= 0 {
-        return nil, fmt.Errorf("amount must be greater than 0")
-    }
-
-    _, err = s.db.SendCoin(ctx, &storage.SendCoinRequest{
-        UserId: userId,
-        Amount: request.Amount,
-        ToUser: request.ToUser,
-    })
-    if err != nil {
-        return nil, err
-    }
-    return &SendCoinResponse{}, nil
+	_, err = s.db.SendCoin(ctx, &storage.SendCoinRequest{
+		UserId: userId,
+		Amount: request.Amount,
+		ToUser: request.ToUser,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &SendCoinResponse{}, nil
 }
 func (s *Service) BuyItem(ctx context.Context, request *BuyItemRequest) (*BuyItemResponse, error) {
 	userId, err := s.userIdFromToken(request.Token)
